@@ -235,7 +235,7 @@ const startEditPayment = (p: PaymentRecord, index: number) => {
 };
 
 const cancelEditPayment = () => {
-  setEditPayment({ index: null, amount: "", method: "", note: "", date: "" });
+  setEditPayment({ index: null, amount: "", method: "", note: "", date: "", serviceAmount: "" });
 };
 
   const saveEditPayment = async () => {
