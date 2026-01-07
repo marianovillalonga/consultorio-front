@@ -811,7 +811,11 @@ const deletePayment = async (index: number) => {
                   type="date"
                   value={historyModal.entry.date}
                   onChange={(e) =>
-                    setHistoryModal((m) => m.entry && { ...m, entry: { ...m.entry, date: e.target.value } })
+                    setHistoryModal(m =>
+                      m.entry
+                        ? { ...m, entry: { ...m.entry, date: e.target.value } }
+                        : m
+                    )
                   }
                 />
               </label>
@@ -821,7 +825,11 @@ const deletePayment = async (index: number) => {
                   className="input"
                   value={historyModal.entry.title}
                   onChange={(e) =>
-                    setHistoryModal((m) => m.entry && { ...m, entry: { ...m.entry, title: e.target.value } })
+                    setHistoryModal(m =>
+                      m.entry
+                        ? { ...m, entry: { ...m.entry, title: e.target.value } }
+                        : m 
+                    )
                   }
                   placeholder="Ej: Control de caries, profilaxis, etc."
                 />
@@ -833,7 +841,11 @@ const deletePayment = async (index: number) => {
                   style={{ minHeight: 140 }}
                   value={historyModal.entry.notes}
                   onChange={(e) =>
-                    setHistoryModal((m) => m.entry && { ...m, entry: { ...m.entry, notes: e.target.value } })
+                    setHistoryModal(m =>
+                      m.entry
+                        ? { ...m, entry: { ...m.entry, notes: e.target.value } }
+                        : m
+                    )
                   }
                   placeholder="Procedimientos realizados, hallazgos, indicaciones..."
                 />
