@@ -1,0 +1,64 @@
+.os-clickable {
+  cursor: pointer;
+}
+
+.os-clickable:hover {
+  background: #e8f0ff;
+}
+
+.os-title {
+  font-weight: 700;
+  color: #0a4dd6;
+  text-decoration: underline;
+}
+
+.os-table-wrap {
+  border: 1px solid #d9dee8;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.os-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.os-table thead th {
+  background: #9fb9c3;
+  color: #0b1d3a;
+  padding: 10px 12px;
+  font-weight: 700;
+  border-bottom: 1px solid #cfd7e6;
+}
+
+.os-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e7ecf5;
+  vertical-align: top;
+}
+
+.row-even {
+  background: #f2f2f2;
+}
+
+.row-odd {
+  background: #e9e9e9;
+}
+
+.os-code {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.os-muted {
+  margin-top: 4px;
+  color: #59667a;
+  font-size: 12px;
+}
+
+.os-arancel {
+  white-space: nowrap;
+  color: #425066;
+}
