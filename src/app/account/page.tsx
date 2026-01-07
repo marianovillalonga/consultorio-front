@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchProfile, ProfileResponse } from "@/lib/api";\nimport { getSession } from "@/lib/session";
+import { fetchProfile, ProfileResponse } from "@/lib/api";
+import { getSession } from "@/lib/session";
 
 export default function AccountPage() {
   const router = useRouter();

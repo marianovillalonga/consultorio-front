@@ -34,7 +34,8 @@ export default function TurnosPage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const session = getSession();\n    const t = session.token;
+    const session = getSession();
+    const t = session.token;
     if (!t) {
       router.replace("/login");
       return;

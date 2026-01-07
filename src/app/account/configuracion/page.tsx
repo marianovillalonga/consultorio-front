@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchProfile, updateProfile, ProfileResponse } from "@/lib/api";\nimport { getSession } from "@/lib/session";
+import { fetchProfile, updateProfile, ProfileResponse } from "@/lib/api";
+import { getSession } from "@/lib/session";
 
 type FormState = {
   fullName?: string;
