@@ -9,6 +9,7 @@ import {
   HistoryEntry,
   fetchPatient,
   fetchPatientAppointments,
+  fetchPatientStudyFile,
   updatePatient,
 } from "@/lib/api";
 import { getSession } from "@/lib/session";
@@ -55,6 +56,7 @@ type StudyFile = {
   data: string;
   description: string;
   createdAt: string;
+  uploadedBy?: number | null;
 };
 
 type TreatmentPlanData = {
@@ -515,7 +517,7 @@ const deletePayment = async (index: number) => {
         mime: parsed.mime,
         data: parsed.data,
         description: studyForm.description.trim(),
-        createdAt: formatMonthYear(new Date()),
+        createdAt: new Date().toISOString(),
       };
       setStudyFiles((prev) => [...prev, nextItem]);
       setStudyForm({ file: null, description: "" });
@@ -525,13 +527,27 @@ const deletePayment = async (index: number) => {
     }
   };
 
-  const downloadStudyFile = (file: StudyFile) => {
-    const bytes = base64ToUint8Array(file.data);
-    const blob = new Blob([bytes], { type: file.mime || "application/octet-stream" });
+  const downloadStudyFile = async (file: StudyFile) => {
+    let data = file.data;
+    let mime = file.mime;
+    let name = file.name;
+    if (!data) {
+      try {
+        const fetched = await fetchPatientStudyFile(token, patientId, file.id);
+        data = fetched.data;
+        mime = fetched.mime;
+        name = fetched.name;
+      } catch (err) {
+        setStudyError((err as Error).message || "No se pudo descargar el archivo.");
+        return;
+      }
+    }
+    const bytes = base64ToUint8Array(data);
+    const blob = new Blob([bytes], { type: mime || "application/octet-stream" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = file.name || "archivo";
+    link.download = name || "archivo";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -897,7 +913,7 @@ const deletePayment = async (index: number) => {
                                 <td style={{ padding: "8px 6px", fontWeight: 600 }}>{item.piece}</td>
                                 <td style={{ padding: "8px 6px" }}>{formatPlanFaces(item.faces)}</td>
                                 <td style={{ padding: "8px 6px" }}>{item.prestation}</td>
-                                <td style={{ padding: "8px 6px" }}>{item.createdAt}</td>
+                                <td style={{ padding: "8px 6px" }}>{formatMonthYearFromIso(item.createdAt)}</td>
                                 <td style={{ padding: "8px 6px" }}>
                                   <div style={{ display: "flex", gap: 8 }}>
                                     <button className="btn" type="button" onClick={() => startEditPlanItem(item)}>
@@ -1561,6 +1577,13 @@ function formatMonthYear(date: Date) {
   return `${month}/${year}`;
 }
 
+function formatMonthYearFromIso(value: string) {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return formatMonthYear(parsed);
+}
+
 function getPlanCreatedAt(id: string, items: TreatmentPlanItem[]) {
   const found = items.find((item) => item.id === id);
   return found?.createdAt || formatMonthYear(new Date());
@@ -1579,9 +1602,9 @@ function parseStudyFiles(raw?: string | null): StudyFile[] {
         mime: String((item as any).mime || "application/octet-stream"),
         data: String((item as any).data || ""),
         description: String((item as any).description || ""),
-        createdAt: String((item as any).createdAt || formatMonthYear(new Date())),
-      }))
-      .filter((item) => item.data);
+        createdAt: String((item as any).createdAt || new Date().toISOString()),
+        uploadedBy: typeof (item as any).uploadedBy === "number" ? (item as any).uploadedBy : null,
+      }));
   } catch {
     return [];
   }

@@ -403,6 +403,17 @@ export async function fetchPatient(token: string, id: number) {
   return data.patient;
 }
 
+export async function fetchPatientStudyFile(token: string, patientId: number, studyId: string) {
+  const res = await apiFetch(`${API_BASE_URL}/patients/${patientId}/studies/${encodeURIComponent(studyId)}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = (await res.json().catch(() => ({}))) as { file?: { name: string; mime: string; data: string }; message?: string };
+  if (!res.ok) throw new Error(data.message || "No se pudo obtener el archivo");
+  if (!data.file) throw new Error("Archivo no encontrado");
+  return data.file;
+}
+
 export async function fetchPatientAppointments(token: string, id: number) {
   const res = await apiFetch(`${API_BASE_URL}/patients/${id}/appointments`, {
     headers: authHeaders(token),
