@@ -45,6 +45,7 @@ type TreatmentPlanItem = {
   piece: string;
   faces: string[];
   prestation: string;
+  createdAt: string;
 };
 
 type TreatmentPlanData = {
@@ -105,7 +106,9 @@ export default function PacienteDetallePage() {
   });
   const [confirmState, setConfirmState] = useState<{ index: number | null }>({ index: null });
   const [odontogram, setOdontogram] = useState<Record<string, ToothMark>>({});
-  const [panel, setPanel] = useState<"datos" | "historia" | "odontograma" | "pagos" | "estudios" | "turnos">("datos");
+  const [panel, setPanel] = useState<
+    "datos" | "historia" | "odontograma" | "plan" | "pagos" | "estudios" | "turnos"
+  >("datos");
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyFilter, setHistoryFilter] = useState<string>("");
   const [historyModal, setHistoryModal] = useState<{ open: boolean; entry: HistoryEntry | null }>({
@@ -119,6 +122,7 @@ export default function PacienteDetallePage() {
     faces: [],
     prestation: "",
   });
+  const [editPlanId, setEditPlanId] = useState<string | null>(null);
   const [planError, setPlanError] = useState("");
 
   useEffect(() => {
@@ -417,18 +421,40 @@ const deletePayment = async (index: number) => {
     }
     const orderedFaces = FACE_OPTIONS.map((f) => f.key).filter((key) => planForm.faces.includes(key));
     const nextItem: TreatmentPlanItem = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: editPlanId || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       piece,
       faces: orderedFaces,
       prestation,
+      createdAt: editPlanId ? getPlanCreatedAt(editPlanId, treatmentPlanItems) : formatMonthYear(new Date()),
     };
-    setTreatmentPlanItems((prev) => [...prev, nextItem]);
+    setTreatmentPlanItems((prev) => {
+      if (!editPlanId) return [...prev, nextItem];
+      return prev.map((item) => (item.id === editPlanId ? nextItem : item));
+    });
     setPlanForm({ piece: "", faces: [], prestation: "" });
+    setEditPlanId(null);
+    setPlanError("");
+  };
+
+  const startEditPlanItem = (item: TreatmentPlanItem) => {
+    setPlanForm({
+      piece: item.piece,
+      faces: item.faces || [],
+      prestation: item.prestation,
+    });
+    setEditPlanId(item.id);
+    setPlanError("");
+  };
+
+  const cancelEditPlanItem = () => {
+    setPlanForm({ piece: "", faces: [], prestation: "" });
+    setEditPlanId(null);
     setPlanError("");
   };
 
   const removeTreatmentPlanItem = (id: string) => {
     setTreatmentPlanItems((prev) => prev.filter((item) => item.id !== id));
+    if (editPlanId === id) cancelEditPlanItem();
   };
 
   const formatPlanFaces = (faces: string[]) => {
@@ -527,6 +553,7 @@ const deletePayment = async (index: number) => {
                     { key: "datos", label: "Datos personales" },
                     { key: "historia", label: "Historia clínica" },
                     { key: "odontograma", label: "Odontograma" },
+                    { key: "plan", label: "Plan de tratamiento" },
                     { key: "estudios", label: "Estudios / imágenes" },
                     { key: "pagos", label: "Pagos y saldo" },
                     { key: "turnos", label: "Turnos del paciente" },
@@ -668,6 +695,11 @@ const deletePayment = async (index: number) => {
                     <div style={{ overflowX: "auto", paddingBottom: 6 }}>
                       <OdontogramGrid data={odontogram} onToggle={toggleSurface} />
                     </div>
+
+                  </div>
+                )}
+
+                {panel === "plan" && (
                     <div
                       style={{
                         marginTop: 12,
@@ -735,11 +767,16 @@ const deletePayment = async (index: number) => {
 
                         {planError && <span className="muted" style={{ color: "#b42318" }}>{planError}</span>}
 
-                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                          <button className="btn btn-primary" type="button" onClick={addTreatmentPlanItem}>
-                            Agregar
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                        {editPlanId && (
+                          <button className="btn" type="button" onClick={cancelEditPlanItem}>
+                            Cancelar
                           </button>
-                        </div>
+                        )}
+                        <button className="btn btn-primary" type="button" onClick={addTreatmentPlanItem}>
+                          {editPlanId ? "Guardar cambios" : "Agregar"}
+                        </button>
+                      </div>
                       </div>
 
                       <div style={{ overflowX: "auto" }}>
@@ -749,19 +786,25 @@ const deletePayment = async (index: number) => {
                           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
                             <thead>
                               <tr style={{ textAlign: "left", borderBottom: "1px solid #d7e3ff" }}>
-                                <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>PI</th>
-                                <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Caras</th>
-                                <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Prestacion</th>
-                                <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Accion</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {treatmentPlanItems.map((item) => (
-                                <tr key={item.id} style={{ borderBottom: "1px solid #e3e8f4" }}>
-                                  <td style={{ padding: "8px 6px", fontWeight: 600 }}>{item.piece}</td>
-                                  <td style={{ padding: "8px 6px" }}>{formatPlanFaces(item.faces)}</td>
-                                  <td style={{ padding: "8px 6px" }}>{item.prestation}</td>
-                                  <td style={{ padding: "8px 6px" }}>
+                              <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>PI</th>
+                              <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Caras</th>
+                              <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Prestacion</th>
+                              <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Fecha</th>
+                              <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Accion</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {treatmentPlanItems.map((item) => (
+                              <tr key={item.id} style={{ borderBottom: "1px solid #e3e8f4" }}>
+                                <td style={{ padding: "8px 6px", fontWeight: 600 }}>{item.piece}</td>
+                                <td style={{ padding: "8px 6px" }}>{formatPlanFaces(item.faces)}</td>
+                                <td style={{ padding: "8px 6px" }}>{item.prestation}</td>
+                                <td style={{ padding: "8px 6px" }}>{item.createdAt}</td>
+                                <td style={{ padding: "8px 6px" }}>
+                                  <div style={{ display: "flex", gap: 8 }}>
+                                    <button className="btn" type="button" onClick={() => startEditPlanItem(item)}>
+                                      Modificar
+                                    </button>
                                     <button
                                       className="btn"
                                       type="button"
@@ -770,16 +813,17 @@ const deletePayment = async (index: number) => {
                                     >
                                       Quitar
                                     </button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
                           </table>
                         )}
                       </div>
                     </div>
-                  </div>
                 )}
+
 
                 {panel === "estudios" && (
                   <div style={{ display: "grid", gap: 8 }}>
@@ -1329,19 +1373,36 @@ function serializeTreatmentPlanItems(items: TreatmentPlanItem[]) {
   return JSON.stringify(items);
 }
 
-function normalizeTreatmentPlanItems(rawItems: Array<Partial<TreatmentPlanItem> & { prestacion?: string; pi?: string }>): TreatmentPlanItem[] {
-  return rawItems
+function normalizeTreatmentPlanItems(
+  rawItems?: Array<Partial<TreatmentPlanItem> & { prestacion?: string; pi?: string }>
+): TreatmentPlanItem[] {
+  return (rawItems || [])
     .filter((item) => item && typeof item === "object")
     .map((item, idx) => {
-      const faces = Array.isArray(item.faces) ? item.faces.filter((f) => typeof f === "string") : [];
-      return {
-        id: typeof item.id === "string" ? item.id : `${Date.now()}-${idx}`,
-        piece: String(item.piece || item.pi || ""),
-        faces,
-        prestation: String(item.prestation || (item as any).prestacion || ""),
-      };
-    })
-    .filter((item) => item.piece || item.prestation);
+        const faces = Array.isArray(item.faces) ? item.faces.filter((f) => typeof f === "string") : [];
+        return {
+          id: typeof item.id === "string" ? item.id : `${Date.now()}-${idx}`,
+          piece: String(item.piece || item.pi || ""),
+          faces,
+          prestation: String(item.prestation || (item as any).prestacion || ""),
+          createdAt:
+            typeof (item as any).createdAt === "string" && (item as any).createdAt
+              ? (item as any).createdAt
+              : formatMonthYear(new Date()),
+        };
+      })
+      .filter((item) => item.piece || item.prestation);
+}
+
+function formatMonthYear(date: Date) {
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const year = date.getFullYear();
+  return `${month}/${year}`;
+}
+
+function getPlanCreatedAt(id: string, items: TreatmentPlanItem[]) {
+  const found = items.find((item) => item.id === id);
+  return found?.createdAt || formatMonthYear(new Date());
 }
 
 function parseHistoryEntries(raw?: string | HistoryEntry[] | null): HistoryEntry[] {
