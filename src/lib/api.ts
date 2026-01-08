@@ -37,6 +37,7 @@ export type Patient = {
   treatmentPlan?: string | null;
   treatmentPlanItems?: string | null;
   studies?: string | null;
+  studiesFiles?: string | null;
   historyEntries?: string | HistoryEntry[] | null;
   balance?: number | null;
   payments?: PaymentRecord[] | null;

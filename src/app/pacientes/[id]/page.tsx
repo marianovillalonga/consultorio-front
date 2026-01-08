@@ -48,6 +48,15 @@ type TreatmentPlanItem = {
   createdAt: string;
 };
 
+type StudyFile = {
+  id: string;
+  name: string;
+  mime: string;
+  data: string;
+  description: string;
+  createdAt: string;
+};
+
 type TreatmentPlanData = {
   notes?: string;
   items?: TreatmentPlanItem[];
@@ -123,7 +132,14 @@ export default function PacienteDetallePage() {
     prestation: "",
   });
   const [editPlanId, setEditPlanId] = useState<string | null>(null);
+  const [planFilter, setPlanFilter] = useState("");
   const [planError, setPlanError] = useState("");
+  const [studyFiles, setStudyFiles] = useState<StudyFile[]>([]);
+  const [studyForm, setStudyForm] = useState<{ file: File | null; description: string }>({
+    file: null,
+    description: "",
+  });
+  const [studyError, setStudyError] = useState("");
 
   useEffect(() => {
     const session = getSession();
@@ -173,6 +189,7 @@ export default function PacienteDetallePage() {
         const parsedHistory = parseHistoryEntries(p.historyEntries);
         setHistoryEntries(parsedHistory);
         if (parsedHistory.length > 0) setHistoryFilter(parsedHistory[0].date);
+        setStudyFiles(parseStudyFiles(p.studiesFiles));
       }
       setAppointments(appts);
       setStatus("idle");
@@ -203,6 +220,7 @@ export default function PacienteDetallePage() {
         treatmentPlan: details.treatmentPlan || undefined,
         treatmentPlanItems: serializeTreatmentPlanItems(treatmentPlanItems) || undefined,
         studies: details.studies || undefined,
+        studiesFiles: serializeStudyFiles(studyFiles) || undefined,
         odontograma: JSON.stringify(odontogram),
         historyEntries: JSON.stringify(historyEntries),
         balance: details.balance ? Number(details.balance) : undefined,
@@ -453,6 +471,10 @@ const deletePayment = async (index: number) => {
   };
 
   const removeTreatmentPlanItem = (id: string) => {
+    if (typeof window !== "undefined") {
+      const ok = window.confirm("Esta seguro que quiere eliminar?");
+      if (!ok) return;
+    }
     setTreatmentPlanItems((prev) => prev.filter((item) => item.id !== id));
     if (editPlanId === id) cancelEditPlanItem();
   };
@@ -463,6 +485,65 @@ const deletePayment = async (index: number) => {
       .map((face) => FACE_OPTIONS.find((opt) => opt.key === face)?.code)
       .filter(Boolean)
       .join("");
+  };
+
+  const planMonths = useMemo(() => {
+    const months = Array.from(new Set(treatmentPlanItems.map((item) => item.createdAt).filter(Boolean)));
+    return months.sort((a, b) => b.localeCompare(a));
+  }, [treatmentPlanItems]);
+
+  const filteredPlanItems = useMemo(() => {
+    if (!planFilter) return treatmentPlanItems;
+    return treatmentPlanItems.filter((item) => item.createdAt === planFilter);
+  }, [treatmentPlanItems, planFilter]);
+
+  const addStudyFile = async () => {
+    if (!studyForm.file) {
+      setStudyError("Selecciona un archivo.");
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(studyForm.file);
+      const parsed = parseDataUrl(dataUrl);
+      if (!parsed) {
+        setStudyError("No se pudo leer el archivo.");
+        return;
+      }
+      const nextItem: StudyFile = {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: studyForm.file.name,
+        mime: parsed.mime,
+        data: parsed.data,
+        description: studyForm.description.trim(),
+        createdAt: formatMonthYear(new Date()),
+      };
+      setStudyFiles((prev) => [...prev, nextItem]);
+      setStudyForm({ file: null, description: "" });
+      setStudyError("");
+    } catch (err) {
+      setStudyError((err as Error).message || "No se pudo leer el archivo.");
+    }
+  };
+
+  const downloadStudyFile = (file: StudyFile) => {
+    const bytes = base64ToUint8Array(file.data);
+    const blob = new Blob([bytes], { type: file.mime || "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name || "archivo";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const removeStudyFile = (id: string) => {
+    if (typeof window !== "undefined") {
+      const ok = window.confirm("Esta seguro que quiere eliminar?");
+      if (!ok) return;
+    }
+    setStudyFiles((prev) => prev.filter((item) => item.id !== id));
   };
 
   const clearOdontogram = () => setOdontogram({});
@@ -611,7 +692,7 @@ const deletePayment = async (index: number) => {
                 )}
 
                 {panel === "historia" && (
-                  <div style={{ display: "grid", gap: 10 }}>
+                    <div style={{ display: "grid", gap: 10 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                       <p className="label">Historia clínica</p>
                       <button className="btn btn-primary" type="button" onClick={() => openHistoryModal()}>
@@ -777,14 +858,31 @@ const deletePayment = async (index: number) => {
                           {editPlanId ? "Guardar cambios" : "Agregar"}
                         </button>
                       </div>
-                      </div>
+                    </div>
 
-                      <div style={{ overflowX: "auto" }}>
-                        {treatmentPlanItems.length === 0 ? (
-                          <p className="muted">Sin prestaciones cargadas.</p>
-                        ) : (
-                          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
-                            <thead>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                      <span className="muted">Filtrar por mes:</span>
+                      <select
+                        className="input"
+                        style={{ maxWidth: 220 }}
+                        value={planFilter}
+                        onChange={(e) => setPlanFilter(e.target.value)}
+                      >
+                        <option value="">Todos</option>
+                        {planMonths.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ overflowX: "auto" }}>
+                      {filteredPlanItems.length === 0 ? (
+                        <p className="muted">Sin prestaciones cargadas.</p>
+                      ) : (
+                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
+                          <thead>
                               <tr style={{ textAlign: "left", borderBottom: "1px solid #d7e3ff" }}>
                               <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>PI</th>
                               <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Caras</th>
@@ -794,7 +892,7 @@ const deletePayment = async (index: number) => {
                             </tr>
                           </thead>
                           <tbody>
-                            {treatmentPlanItems.map((item) => (
+                            {filteredPlanItems.map((item) => (
                               <tr key={item.id} style={{ borderBottom: "1px solid #e3e8f4" }}>
                                 <td style={{ padding: "8px 6px", fontWeight: 600 }}>{item.piece}</td>
                                 <td style={{ padding: "8px 6px" }}>{formatPlanFaces(item.faces)}</td>
@@ -827,17 +925,80 @@ const deletePayment = async (index: number) => {
 
                 {panel === "estudios" && (
                   <div style={{ display: "grid", gap: 8 }}>
-                    <p className="label">Estudios / imágenes</p>
-                    <textarea
-                      className="input"
-                      style={{ minHeight: 200 }}
-                      value={details.studies}
-                      onChange={(e) => onChange("studies", e.target.value)}
-                      placeholder="Notas de estudios, links a radiografías, descripciones o resultados."
-                    />
-                    <p className="muted" style={{ fontSize: 13 }}>
-                      Puedes pegar URLs de radiografías (Drive, PACS) o registrar hallazgos relevantes.
-                    </p>
+                    <p className="label">Estudios / imÇ­genes</p>
+                    <div style={{ display: "grid", gap: 10 }}>
+                      <label className="form-group">
+                        <span className="label">Archivo</span>
+                        <input
+                          className="input"
+                          type="file"
+                          onChange={(e) => {
+                            const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null;
+                            setStudyForm((prev) => ({ ...prev, file }));
+                            setStudyError("");
+                          }}
+                        />
+                      </label>
+                      <label className="form-group">
+                        <span className="label">Descripcion</span>
+                        <input
+                          className="input"
+                          value={studyForm.description}
+                          onChange={(e) => {
+                            setStudyForm((prev) => ({ ...prev, description: e.target.value }));
+                            setStudyError("");
+                          }}
+                          placeholder="Ej: Rx panoramica, control ortodoncia..."
+                        />
+                      </label>
+                      {studyError && <span className="muted" style={{ color: "#b42318" }}>{studyError}</span>}
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <button className="btn btn-primary" type="button" onClick={addStudyFile}>
+                          Agregar estudio
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ overflowX: "auto" }}>
+                      {studyFiles.length === 0 ? (
+                        <p className="muted">Sin archivos cargados.</p>
+                      ) : (
+                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
+                          <thead>
+                            <tr style={{ textAlign: "left", borderBottom: "1px solid #d7e3ff" }}>
+                              <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Archivo</th>
+                              <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Descripcion</th>
+                              <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Fecha</th>
+                              <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Accion</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {studyFiles.map((item) => (
+                              <tr key={item.id} style={{ borderBottom: "1px solid #e3e8f4" }}>
+                                <td style={{ padding: "8px 6px", fontWeight: 600 }}>{item.name}</td>
+                                <td style={{ padding: "8px 6px" }}>{item.description || "-"}</td>
+                                <td style={{ padding: "8px 6px" }}>{item.createdAt}</td>
+                                <td style={{ padding: "8px 6px" }}>
+                                  <div style={{ display: "flex", gap: 8 }}>
+                                    <button className="btn" type="button" onClick={() => downloadStudyFile(item)}>
+                                      Descargar
+                                    </button>
+                                    <button
+                                      className="btn"
+                                      type="button"
+                                      onClick={() => removeStudyFile(item.id)}
+                                      style={{ background: "#ffe6e6", color: "#b42318", borderColor: "#f5c2c7" }}
+                                    >
+                                      Quitar
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1403,6 +1564,63 @@ function formatMonthYear(date: Date) {
 function getPlanCreatedAt(id: string, items: TreatmentPlanItem[]) {
   const found = items.find((item) => item.id === id);
   return found?.createdAt || formatMonthYear(new Date());
+}
+
+function parseStudyFiles(raw?: string | null): StudyFile[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as StudyFile[] | unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item) => item && typeof item === "object")
+      .map((item, idx) => ({
+        id: typeof (item as any).id === "string" ? (item as any).id : `${Date.now()}-${idx}`,
+        name: String((item as any).name || "archivo"),
+        mime: String((item as any).mime || "application/octet-stream"),
+        data: String((item as any).data || ""),
+        description: String((item as any).description || ""),
+        createdAt: String((item as any).createdAt || formatMonthYear(new Date())),
+      }))
+      .filter((item) => item.data);
+  } catch {
+    return [];
+  }
+}
+
+function serializeStudyFiles(items: StudyFile[]) {
+  if (!items || items.length === 0) return "";
+  return JSON.stringify(items);
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function parseDataUrl(value: string) {
+  const commaIndex = value.indexOf(",");
+  if (commaIndex === -1) return null;
+  const header = value.slice(0, commaIndex);
+  const data = value.slice(commaIndex + 1);
+  const match = header.match(/data:(.*?);base64/);
+  return {
+    mime: match ? match[1] : "application/octet-stream",
+    data,
+  };
+}
+
+function base64ToUint8Array(base64: string) {
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 }
 
 function parseHistoryEntries(raw?: string | HistoryEntry[] | null): HistoryEntry[] {
