@@ -48,8 +48,8 @@ type TreatmentPlanItem = {
 };
 
 type TreatmentPlanData = {
-  notes: string;
-  items: TreatmentPlanItem[];
+  notes?: string;
+  items?: TreatmentPlanItem[];
 };
 
 const FACE_OPTIONS = [
@@ -148,7 +148,7 @@ export default function PacienteDetallePage() {
       if (p) {
         setPatient(p);
         const autoBalance = computeBalance(p.payments || []);
-        const parsedPlan = parseTreatmentPlan(p.treatmentPlan);
+        const parsedPlan = parseTreatmentPlanItems(p.treatmentPlanItems || p.treatmentPlan || "");
         setDetails({
           fullName: p.fullName || "",
           email: p.email || "",
@@ -157,7 +157,7 @@ export default function PacienteDetallePage() {
           obraSocial: p.obraSocial || "",
           obraSocialNumero: p.obraSocialNumero || "",
           historialClinico: p.historialClinico || "",
-          treatmentPlan: parsedPlan.notes || "",
+          treatmentPlan: p.treatmentPlan || parsedPlan.notes || "",
           studies: p.studies || "",
           balance:
             p.balance !== null && p.balance !== undefined
@@ -196,7 +196,8 @@ export default function PacienteDetallePage() {
         obraSocial: details.obraSocial || undefined,
         obraSocialNumero: details.obraSocialNumero || undefined,
         historialClinico: details.historialClinico || undefined,
-        treatmentPlan: serializeTreatmentPlan(details.treatmentPlan, treatmentPlanItems) || undefined,
+        treatmentPlan: details.treatmentPlan || undefined,
+        treatmentPlanItems: serializeTreatmentPlanItems(treatmentPlanItems) || undefined,
         studies: details.studies || undefined,
         odontograma: JSON.stringify(odontogram),
         historyEntries: JSON.stringify(historyEntries),
@@ -1305,7 +1306,7 @@ function parseOdontogram(raw?: string | null): Record<string, ToothMark> {
   return {};
 }
 
-function parseTreatmentPlan(raw?: string | null): TreatmentPlanData {
+function parseTreatmentPlanItems(raw?: string | null): { notes?: string; items: TreatmentPlanItem[] } {
   if (!raw) return { notes: "", items: [] };
   try {
     const parsed = JSON.parse(raw) as TreatmentPlanData | TreatmentPlanItem[] | { notes?: string; items?: TreatmentPlanItem[] };
@@ -1323,14 +1324,9 @@ function parseTreatmentPlan(raw?: string | null): TreatmentPlanData {
   return { notes: raw, items: [] };
 }
 
-function serializeTreatmentPlan(notes: string, items: TreatmentPlanItem[]) {
-  const safeNotes = notes ? notes.trim() : "";
-  const payload: TreatmentPlanData = {
-    notes: safeNotes,
-    items: items || [],
-  };
-  if (!payload.notes && payload.items.length === 0) return "";
-  return JSON.stringify(payload);
+function serializeTreatmentPlanItems(items: TreatmentPlanItem[]) {
+  if (!items || items.length === 0) return "";
+  return JSON.stringify(items);
 }
 
 function normalizeTreatmentPlanItems(rawItems: Array<Partial<TreatmentPlanItem> & { prestacion?: string; pi?: string }>): TreatmentPlanItem[] {

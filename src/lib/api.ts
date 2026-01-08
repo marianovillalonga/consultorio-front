@@ -35,6 +35,7 @@ export type Patient = {
   obraSocialNumero?: string | null;
   historialClinico?: string | null;
   treatmentPlan?: string | null;
+  treatmentPlanItems?: string | null;
   studies?: string | null;
   historyEntries?: string | HistoryEntry[] | null;
   balance?: number | null;
