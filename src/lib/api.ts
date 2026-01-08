@@ -174,12 +174,16 @@ export async function logoutRequest() {
 }
 
 export async function activateAccount(token: string) {
-  const res = await apiFetch(`${API_BASE_URL}/auth/activate?token=${encodeURIComponent(token)}`, {
-    method: "GET",
-  });
-  const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
-  if (!res.ok) throw new Error(data.message || "No se pudo activar la cuenta");
-  return data.ok;
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL
+  if (!base) throw new Error("Falta NEXT_PUBLIC_API_BASE_URL")
+
+  const url = `${base}/auth/activate?token=${encodeURIComponent(token)}`
+  const res = await fetch(url, { method: "GET" })
+
+  const data = await res.json().catch(() => ({})) as { ok?: boolean; message?: string }
+  if (!res.ok) throw new Error(data.message || `No se pudo activar la cuenta (${res.status})`)
+
+  return data.ok === true
 }
 
 export async function resendActivation(email: string) {
