@@ -40,6 +40,29 @@ type ToothMark = {
   extraction?: boolean;
 };
 
+type TreatmentPlanItem = {
+  id: string;
+  piece: string;
+  faces: string[];
+  prestation: string;
+};
+
+type TreatmentPlanData = {
+  notes: string;
+  items: TreatmentPlanItem[];
+};
+
+const FACE_OPTIONS = [
+  { key: "mesial", label: "Mesial", code: "M" },
+  { key: "distal", label: "Distal", code: "D" },
+  { key: "oclusal", label: "Oclusal", code: "O" },
+  { key: "vestibular", label: "Vestibular", code: "V" },
+  { key: "lingual", label: "Lingual", code: "L" },
+  { key: "palatino", label: "Palatino", code: "P" },
+  { key: "incisal", label: "Incisal", code: "I" },
+  { key: "gingival", label: "Gingival", code: "G" },
+];
+
 export default function PacienteDetallePage() {
   const router = useRouter();
   const params = useParams();
@@ -90,6 +113,13 @@ export default function PacienteDetallePage() {
     entry: null,
   });
   const [tool, setTool] = useState<OdontoTool>("blue");
+  const [treatmentPlanItems, setTreatmentPlanItems] = useState<TreatmentPlanItem[]>([]);
+  const [planForm, setPlanForm] = useState<{ piece: string; faces: string[]; prestation: string }>({
+    piece: "",
+    faces: [],
+    prestation: "",
+  });
+  const [planError, setPlanError] = useState("");
 
   useEffect(() => {
     const session = getSession();
@@ -118,6 +148,7 @@ export default function PacienteDetallePage() {
       if (p) {
         setPatient(p);
         const autoBalance = computeBalance(p.payments || []);
+        const parsedPlan = parseTreatmentPlan(p.treatmentPlan);
         setDetails({
           fullName: p.fullName || "",
           email: p.email || "",
@@ -126,13 +157,14 @@ export default function PacienteDetallePage() {
           obraSocial: p.obraSocial || "",
           obraSocialNumero: p.obraSocialNumero || "",
           historialClinico: p.historialClinico || "",
-          treatmentPlan: p.treatmentPlan || "",
+          treatmentPlan: parsedPlan.notes || "",
           studies: p.studies || "",
           balance:
             p.balance !== null && p.balance !== undefined
               ? String(p.balance)
               : String(autoBalance),
         });
+        setTreatmentPlanItems(parsedPlan.items);
         setOdontogram(parseOdontogram(p.odontograma));
         const parsedHistory = parseHistoryEntries(p.historyEntries);
         setHistoryEntries(parsedHistory);
@@ -164,7 +196,7 @@ export default function PacienteDetallePage() {
         obraSocial: details.obraSocial || undefined,
         obraSocialNumero: details.obraSocialNumero || undefined,
         historialClinico: details.historialClinico || undefined,
-        treatmentPlan: details.treatmentPlan || undefined,
+        treatmentPlan: serializeTreatmentPlan(details.treatmentPlan, treatmentPlanItems) || undefined,
         studies: details.studies || undefined,
         odontograma: JSON.stringify(odontogram),
         historyEntries: JSON.stringify(historyEntries),
@@ -366,6 +398,46 @@ const deletePayment = async (index: number) => {
     });
   };
 
+  const togglePlanFace = (face: string) => {
+    setPlanForm((prev) => {
+      const exists = prev.faces.includes(face);
+      const nextFaces = exists ? prev.faces.filter((f) => f !== face) : [...prev.faces, face];
+      return { ...prev, faces: nextFaces };
+    });
+    setPlanError("");
+  };
+
+  const addTreatmentPlanItem = () => {
+    const piece = planForm.piece.trim();
+    const prestation = planForm.prestation.trim();
+    if (!piece || !prestation) {
+      setPlanError("Pieza y prestacion son obligatorias.");
+      return;
+    }
+    const orderedFaces = FACE_OPTIONS.map((f) => f.key).filter((key) => planForm.faces.includes(key));
+    const nextItem: TreatmentPlanItem = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      piece,
+      faces: orderedFaces,
+      prestation,
+    };
+    setTreatmentPlanItems((prev) => [...prev, nextItem]);
+    setPlanForm({ piece: "", faces: [], prestation: "" });
+    setPlanError("");
+  };
+
+  const removeTreatmentPlanItem = (id: string) => {
+    setTreatmentPlanItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const formatPlanFaces = (faces: string[]) => {
+    if (!faces || faces.length === 0) return "-";
+    return faces
+      .map((face) => FACE_OPTIONS.find((opt) => opt.key === face)?.code)
+      .filter(Boolean)
+      .join("");
+  };
+
   const clearOdontogram = () => setOdontogram({});
 
   const printInvoice = (payment: PaymentRecord, index: number) => {
@@ -498,13 +570,13 @@ const deletePayment = async (index: number) => {
                     </section>
 
                     <section style={{ display: "grid", gap: 8 }}>
-                      <p className="label">Tratamiento</p>
+                      <p className="label">Notas de tratamiento</p>
                       <textarea
                         className="input"
                         style={{ minHeight: 120 }}
                         value={details.treatmentPlan}
                         onChange={(e) => onChange("treatmentPlan", e.target.value)}
-                        placeholder="Plan de tratamiento, sesiones, indicaciones..."
+                        placeholder="Notas generales, sesiones, indicaciones..."
                       />
                     </section>
                   </div>
@@ -594,6 +666,116 @@ const deletePayment = async (index: number) => {
                     </div>
                     <div style={{ overflowX: "auto", paddingBottom: 6 }}>
                       <OdontogramGrid data={odontogram} onToggle={toggleSurface} />
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 12,
+                        display: "grid",
+                        gap: 12,
+                        padding: 12,
+                        borderRadius: 12,
+                        border: "1px solid #d7e3ff",
+                        background: "#f7f9ff",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <p className="label" style={{ margin: 0 }}>Plan de tratamiento</p>
+                        <span className="muted" style={{ fontSize: 12 }}>Piezas = PI, Caras = seleccion del paciente.</span>
+                      </div>
+
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <label className="form-group">
+                          <span className="label">Pieza (PI)</span>
+                          <select
+                            className="input"
+                            value={planForm.piece}
+                            onChange={(e) => {
+                              setPlanForm((prev) => ({ ...prev, piece: e.target.value }));
+                              setPlanError("");
+                            }}
+                          >
+                            <option value="">Selecciona una pieza</option>
+                            {TEETH_LIST.map((tooth) => (
+                              <option key={tooth} value={tooth}>
+                                {tooth}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <span className="label">Caras</span>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
+                            {FACE_OPTIONS.map((face) => (
+                              <label key={face.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={planForm.faces.includes(face.key)}
+                                  onChange={() => togglePlanFace(face.key)}
+                                />
+                                <span className="muted">{face.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <label className="form-group">
+                          <span className="label">Prestacion</span>
+                          <input
+                            className="input"
+                            value={planForm.prestation}
+                            onChange={(e) => {
+                              setPlanForm((prev) => ({ ...prev, prestation: e.target.value }));
+                              setPlanError("");
+                            }}
+                            placeholder="Ej: 02.09"
+                          />
+                        </label>
+
+                        {planError && <span className="muted" style={{ color: "#b42318" }}>{planError}</span>}
+
+                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                          <button className="btn btn-primary" type="button" onClick={addTreatmentPlanItem}>
+                            Agregar
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ overflowX: "auto" }}>
+                        {treatmentPlanItems.length === 0 ? (
+                          <p className="muted">Sin prestaciones cargadas.</p>
+                        ) : (
+                          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
+                            <thead>
+                              <tr style={{ textAlign: "left", borderBottom: "1px solid #d7e3ff" }}>
+                                <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>PI</th>
+                                <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Caras</th>
+                                <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Prestacion</th>
+                                <th style={{ padding: "8px 6px", fontSize: 12, color: "#0b1d3a" }}>Accion</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {treatmentPlanItems.map((item) => (
+                                <tr key={item.id} style={{ borderBottom: "1px solid #e3e8f4" }}>
+                                  <td style={{ padding: "8px 6px", fontWeight: 600 }}>{item.piece}</td>
+                                  <td style={{ padding: "8px 6px" }}>{formatPlanFaces(item.faces)}</td>
+                                  <td style={{ padding: "8px 6px" }}>{item.prestation}</td>
+                                  <td style={{ padding: "8px 6px" }}>
+                                    <button
+                                      className="btn"
+                                      type="button"
+                                      onClick={() => removeTreatmentPlanItem(item.id)}
+                                      style={{ background: "#ffe6e6", color: "#b42318", borderColor: "#f5c2c7" }}
+                                    >
+                                      Quitar
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -961,6 +1143,8 @@ const TEETH_ROWS = [
   ["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"],
 ];
 
+const TEETH_LIST = TEETH_ROWS.flat();
+
 function computeBalance(payments: PaymentRecord[]) {
   if (!payments || payments.length === 0) return 0;
   return payments.reduce((acc, p) => {
@@ -1119,6 +1303,49 @@ function parseOdontogram(raw?: string | null): Record<string, ToothMark> {
     return {};
   }
   return {};
+}
+
+function parseTreatmentPlan(raw?: string | null): TreatmentPlanData {
+  if (!raw) return { notes: "", items: [] };
+  try {
+    const parsed = JSON.parse(raw) as TreatmentPlanData | TreatmentPlanItem[] | { notes?: string; items?: TreatmentPlanItem[] };
+    if (Array.isArray(parsed)) {
+      return { notes: "", items: normalizeTreatmentPlanItems(parsed) };
+    }
+    if (parsed && typeof parsed === "object") {
+      const notes = typeof (parsed as TreatmentPlanData).notes === "string" ? (parsed as TreatmentPlanData).notes : "";
+      const items = Array.isArray((parsed as TreatmentPlanData).items) ? (parsed as TreatmentPlanData).items : [];
+      return { notes, items: normalizeTreatmentPlanItems(items) };
+    }
+  } catch {
+    return { notes: raw, items: [] };
+  }
+  return { notes: raw, items: [] };
+}
+
+function serializeTreatmentPlan(notes: string, items: TreatmentPlanItem[]) {
+  const safeNotes = notes ? notes.trim() : "";
+  const payload: TreatmentPlanData = {
+    notes: safeNotes,
+    items: items || [],
+  };
+  if (!payload.notes && payload.items.length === 0) return "";
+  return JSON.stringify(payload);
+}
+
+function normalizeTreatmentPlanItems(rawItems: Array<Partial<TreatmentPlanItem> & { prestacion?: string; pi?: string }>): TreatmentPlanItem[] {
+  return rawItems
+    .filter((item) => item && typeof item === "object")
+    .map((item, idx) => {
+      const faces = Array.isArray(item.faces) ? item.faces.filter((f) => typeof f === "string") : [];
+      return {
+        id: typeof item.id === "string" ? item.id : `${Date.now()}-${idx}`,
+        piece: String(item.piece || item.pi || ""),
+        faces,
+        prestation: String(item.prestation || (item as any).prestacion || ""),
+      };
+    })
+    .filter((item) => item.piece || item.prestation);
 }
 
 function parseHistoryEntries(raw?: string | HistoryEntry[] | null): HistoryEntry[] {
