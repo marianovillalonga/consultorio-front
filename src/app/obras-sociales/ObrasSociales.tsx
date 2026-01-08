@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ObraSocial, createObraSocial, deleteObraSocial, fetchObrasSociales, updateObraSocial } from "@/lib/api";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { getSession } from "@/lib/session";
 
 type FormState = {
@@ -47,6 +48,15 @@ export default function ObrasSocialesPage() {
     normasFacturacionFileData: "",
   });
   const [editId, setEditId] = useState<number | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    message: string;
+    onConfirm: (() => void) | null;
+  }>({ open: false, message: "", onConfirm: null });
+
+  const openConfirm = (message: string, onConfirm: () => void) => {
+    setConfirmDialog({ open: true, message, onConfirm });
+  };
 
   useEffect(() => {
     const session = getSession();
@@ -214,20 +224,20 @@ export default function ObrasSocialesPage() {
 
   const handleDelete = async (id: number) => {
     if (!token) return;
-    const confirmed = window.confirm("¿Eliminar obra social?");
-    if (!confirmed) return;
-    setStatus("saving");
-    setMessage("");
-    try {
-      await deleteObraSocial(token, id);
-      await loadObras(token);
-      setStatus("idle");
-      setMessage("Obra social eliminada");
-    } catch (err) {
-      const e = err as Error;
-      setStatus("error");
-      setMessage(e.message || "No se pudo eliminar la obra social");
-    }
+    openConfirm("Esta seguro que quiere eliminar?", async () => {
+      setStatus("saving");
+      setMessage("");
+      try {
+        await deleteObraSocial(token, id);
+        await loadObras(token);
+        setStatus("idle");
+        setMessage("Obra social eliminada");
+      } catch (err) {
+        const e = err as Error;
+        setStatus("error");
+        setMessage(e.message || "No se pudo eliminar la obra social");
+      }
+    });
   };
 
   const [search, setSearch] = useState("");
@@ -280,9 +290,11 @@ export default function ObrasSocialesPage() {
   };
 
   const removeArancel = (index: number) => {
-    setForm((f) => {
-      const next = f.aranceles.filter((_, i) => i !== index);
-      return { ...f, aranceles: next };
+    openConfirm("Esta seguro que quiere eliminar?", () => {
+      setForm((f) => {
+        const next = f.aranceles.filter((_, i) => i !== index);
+        return { ...f, aranceles: next };
+      });
     });
   };
 
@@ -631,6 +643,16 @@ export default function ObrasSocialesPage() {
           onSave={saveArancel}
         />
       )}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        message={confirmDialog.message}
+        onCancel={() => setConfirmDialog({ open: false, message: "", onConfirm: null })}
+        onConfirm={() => {
+          const action = confirmDialog.onConfirm;
+          setConfirmDialog({ open: false, message: "", onConfirm: null });
+          if (action) action();
+        }}
+      />
     </section>
   );
 }

@@ -13,6 +13,7 @@ import {
   updatePatient,
 } from "@/lib/api";
 import { getSession } from "@/lib/session";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 type OdontoTool = "red" | "blue" | "extract";
 
@@ -115,7 +116,11 @@ export default function PacienteDetallePage() {
     date: "",
     serviceAmount: "",
   });
-  const [confirmState, setConfirmState] = useState<{ index: number | null }>({ index: null });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    message: string;
+    onConfirm: (() => void) | null;
+  }>({ open: false, message: "", onConfirm: null });
   const [odontogram, setOdontogram] = useState<Record<string, ToothMark>>({});
   const [panel, setPanel] = useState<
     "datos" | "historia" | "odontograma" | "plan" | "pagos" | "estudios" | "turnos"
@@ -334,7 +339,27 @@ const cancelEditPayment = () => {
 
 const deletePayment = async (index: number) => {
   if (!patient || !token) return;
-  setConfirmState({ index });
+  openConfirm("Esta seguro que quiere eliminar?", async () => {
+    const idx = index;
+    if (idx === null || !patient || !token) return;
+    const payments = [...(patient.payments || [])];
+    payments.splice(idx, 1);
+    const newBalance = computeBalance(payments);
+    setPaymentStatus("saving");
+    setPaymentMessage("");
+    try {
+      const updated = await updatePatient(token, patientId, { payments, balance: newBalance });
+      setPatient(updated ? { ...updated, payments } : { ...(patient as Patient), payments });
+      setDetails((prev) => ({ ...prev, balance: String(newBalance) }));
+      setPaymentStatus("success");
+      setPaymentMessage("Pago eliminado");
+      if (editPayment.index === idx) cancelEditPayment();
+    } catch (err) {
+      const e = err as Error;
+      setPaymentStatus("error");
+      setPaymentMessage(e.message || "No se pudo eliminar el pago");
+    }
+  });
 };
 
   const debtLabel = useMemo(() => {
@@ -473,12 +498,10 @@ const deletePayment = async (index: number) => {
   };
 
   const removeTreatmentPlanItem = (id: string) => {
-    if (typeof window !== "undefined") {
-      const ok = window.confirm("Esta seguro que quiere eliminar?");
-      if (!ok) return;
-    }
-    setTreatmentPlanItems((prev) => prev.filter((item) => item.id !== id));
-    if (editPlanId === id) cancelEditPlanItem();
+    openConfirm("Esta seguro que quiere eliminar?", () => {
+      setTreatmentPlanItems((prev) => prev.filter((item) => item.id !== id));
+      if (editPlanId === id) cancelEditPlanItem();
+    });
   };
 
   const formatPlanFaces = (faces: string[]) => {
@@ -487,6 +510,10 @@ const deletePayment = async (index: number) => {
       .map((face) => FACE_OPTIONS.find((opt) => opt.key === face)?.code)
       .filter(Boolean)
       .join("");
+  };
+
+  const openConfirm = (message: string, onConfirm: () => void) => {
+    setConfirmDialog({ open: true, message, onConfirm });
   };
 
   const planMonths = useMemo(() => {
@@ -555,11 +582,9 @@ const deletePayment = async (index: number) => {
   };
 
   const removeStudyFile = (id: string) => {
-    if (typeof window !== "undefined") {
-      const ok = window.confirm("Esta seguro que quiere eliminar?");
-      if (!ok) return;
-    }
-    setStudyFiles((prev) => prev.filter((item) => item.id !== id));
+    openConfirm("Esta seguro que quiere eliminar?", () => {
+      setStudyFiles((prev) => prev.filter((item) => item.id !== id));
+    });
   };
 
   const clearOdontogram = () => setOdontogram({});
@@ -941,7 +966,7 @@ const deletePayment = async (index: number) => {
 
                 {panel === "estudios" && (
                   <div style={{ display: "grid", gap: 8 }}>
-                    <p className="label">Estudios / imÇ­genes</p>
+                    <p className="label">Estudios / ima­genes</p>
                     <div style={{ display: "grid", gap: 10 }}>
                       <label className="form-group">
                         <span className="label">Archivo</span>
@@ -1268,34 +1293,16 @@ const deletePayment = async (index: number) => {
         </div>
       )}
 
-      {confirmState.index !== null && (
-        <ConfirmModal
-          onCancel={() => setConfirmState({ index: null })}
-          onConfirm={async () => {
-            const idx = confirmState.index;
-            if (idx === null || !patient || !token) return;
-            const payments = [...(patient.payments || [])];
-            payments.splice(idx, 1);
-            const newBalance = computeBalance(payments);
-            setPaymentStatus("saving");
-            setPaymentMessage("");
-            try {
-              const updated = await updatePatient(token, patientId, { payments, balance: newBalance });
-              setPatient(updated ? { ...updated, payments } : { ...(patient as Patient), payments });
-              setDetails((prev) => ({ ...prev, balance: String(newBalance) }));
-              setPaymentStatus("success");
-              setPaymentMessage("Pago eliminado");
-              if (editPayment.index === idx) cancelEditPayment();
-            } catch (err) {
-              const e = err as Error;
-              setPaymentStatus("error");
-              setPaymentMessage(e.message || "No se pudo eliminar el pago");
-            } finally {
-              setConfirmState({ index: null });
-            }
-          }}
-        />
-      )}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        message={confirmDialog.message}
+        onCancel={() => setConfirmDialog({ open: false, message: "", onConfirm: null })}
+        onConfirm={() => {
+          const action = confirmDialog.onConfirm;
+          setConfirmDialog({ open: false, message: "", onConfirm: null });
+          if (action) action();
+        }}
+      />
 
       {editPayment.index !== null && (
         <EditPaymentModal
@@ -1656,56 +1663,6 @@ function parseHistoryEntries(raw?: string | HistoryEntry[] | null): HistoryEntry
     return [];
   }
   return [];
-}
-
-function ConfirmModal({
-  onCancel,
-  onConfirm,
-}: {
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div className="modal-backdrop" style={{ background: "rgba(12,18,46,0.55)" }}>
-      <div
-        className="modal-card"
-        style={{
-          maxWidth: 420,
-          padding: 20,
-          borderRadius: 14,
-          border: "1px solid #e3e8f4",
-          boxShadow: "0 18px 38px rgba(15,23,42,0.28)",
-        }}
-      >
-        <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 20 }}>🗑️</span>
-            <div>
-              <p className="label" style={{ margin: 0 }}>
-                Eliminar pago
-              </p>
-              <p className="muted" style={{ margin: 0 }}>
-                Esta acción actualizará el saldo del paciente.
-              </p>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <button className="btn" type="button" onClick={onCancel}>
-              Cancelar
-            </button>
-            <button
-              className="btn btn-primary"
-              style={{ background: "#d92d2d", borderColor: "#d92d2d" }}
-              type="button"
-              onClick={onConfirm}
-            >
-              Eliminar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function EditPaymentModal({
