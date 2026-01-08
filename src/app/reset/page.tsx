@@ -1,9 +1,12 @@
+import { Suspense } from "react";
 import ResetClient from "./ResetClient";
 
 export default function ResetPage() {
   return (
     <section className="auth-hero">
-      <ResetClient />
+      <Suspense>
+        <ResetClient />
+      </Suspense>
     </section>
   );
 }
