@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -45,7 +45,7 @@ export function AuthForm({ mode, redirectTo, showHeader = true }: Props) {
       });
 
       if (mode === "login") {
-        saveSession(data.token || "", data.user.role);
+        saveSession(data.token || "", data.user.role, data.csrfToken || "");
       }
       setStatus("success");
       setMessage(mode === "register" ? "Revisa tu correo para activar la cuenta." : "Accion completada con exito.");
@@ -239,4 +239,5 @@ export function AuthForm({ mode, redirectTo, showHeader = true }: Props) {
     </div>
   );
 }
+
 

@@ -1,3 +1,5 @@
+import { setSessionCsrf } from "@/lib/session";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -10,6 +12,11 @@ const getCsrfToken = () => {
       .find((c) => c.startsWith("csrfToken="))
       ?.split("=")[1] || ""
   );
+};
+
+const getStoredCsrfToken = () => {
+  if (typeof localStorage === "undefined") return "";
+  return localStorage.getItem("csrfToken") || "";
 };
 
 type AuthUser = {
@@ -59,6 +66,7 @@ export type HistoryEntry = {
 
 export type AuthResponse = {
   token?: string;
+  csrfToken?: string;
   user: AuthUser;
   patient?: Patient;
 };
@@ -223,7 +231,7 @@ const authHeaders = (_token?: string) => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  const csrf = getCsrfToken();
+  const csrf = getStoredCsrfToken() || getCsrfToken();
   if (csrf) headers["X-CSRF-Token"] = csrf;
   return headers;
 };
@@ -243,6 +251,9 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
     credentials: "include",
   });
   if (!refreshRes.ok) return res;
+
+  const refreshCsrf = refreshRes.headers.get("X-CSRF-Token");
+  if (refreshCsrf) setSessionCsrf(refreshCsrf);
 
   res = await fetch(url, baseOptions);
   return res;
@@ -584,4 +595,6 @@ export async function updateAdminUserPermissions(
   if (!res.ok) throw new Error(data.message || "No se pudieron guardar los permisos");
   return data.ok;
 }
+
+
 
