@@ -147,13 +147,6 @@ export function AuthForm({ mode, redirectTo, showHeader = true }: Props) {
               </button>
             </div>
           </label>
-          {!isRegister && (
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Link href="/recuperar" className="btn" style={{ padding: "6px 12px" }}>
-                Olvidaste tu contrasena?
-              </Link>
-            </div>
-          )}
           {isRegister && (
             <label className="form-group">
               <span className="label">Repetir contrasena</span>
@@ -224,12 +217,23 @@ export function AuthForm({ mode, redirectTo, showHeader = true }: Props) {
           <button className="btn btn-primary" type="submit" disabled={isDisabled || !passwordsMatch}>
             {status === "loading" ? "Enviando..." : submitLabel}
           </button>
-          <p className="muted">
-            {isRegister ? "Ya tienes cuenta?" : "Aun no tienes cuenta?"}{" "}
-            <Link href={isRegister ? "/login" : "/register"} style={{ fontWeight: 700, color: "#1b3f9e" }}>
-              {isRegister ? "Inicia sesion" : "Registrate"}
-            </Link>
-          </p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <p className="muted">
+              {isRegister ? "Ya tienes cuenta?" : "Aun no tienes cuenta?"}{" "}
+              <Link href={isRegister ? "/login" : "/register"} style={{ fontWeight: 700, color: "#1b3f9e" }}>
+                {isRegister ? "Inicia sesion" : "Registrate"}
+              </Link>
+            </p>
+            {!isRegister && (
+              <Link
+                href="/recuperar"
+                className="btn"
+                style={{ padding: "4px 8px", fontSize: "12px", borderColor: "#dbe3f3", background: "#f5f7ff" }}
+              >
+                Olvidaste tu contrasena?
+              </Link>
+            )}
+          </div>
         </div>
       </form>
     </div>
