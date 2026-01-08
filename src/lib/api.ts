@@ -197,6 +197,28 @@ export async function resendActivation(email: string) {
   return data.ok;
 }
 
+export async function requestPasswordReset(email: string) {
+  const res = await apiFetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ email }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+  if (!res.ok) throw new Error(data.message || "No se pudo enviar el correo");
+  return data.ok;
+}
+
+export async function resetPassword(token: string, password: string) {
+  const res = await apiFetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ token, password }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+  if (!res.ok) throw new Error(data.message || "No se pudo cambiar la contrasena");
+  return data.ok;
+}
+
 const authHeaders = (_token?: string) => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",

@@ -147,6 +147,13 @@ export function AuthForm({ mode, redirectTo, showHeader = true }: Props) {
               </button>
             </div>
           </label>
+          {!isRegister && (
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Link href="/recuperar" className="muted" style={{ fontWeight: 600 }}>
+                Olvidaste tu contrasena?
+              </Link>
+            </div>
+          )}
           {isRegister && (
             <label className="form-group">
               <span className="label">Repetir contrasena</span>
