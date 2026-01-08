@@ -4,7 +4,7 @@ export default function Home() {
       <div>
         <div className="brand-mark">
           <div className="brand-icon">
-            <span>MV</span>
+            <img src="/images/logo.png" alt="Mario Villalonga" />
           </div>
           <span>Mariano Villalonga</span>
         </div>
