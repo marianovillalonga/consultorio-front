@@ -237,11 +237,16 @@ export default function TurnosDoctorPage() {
         )}
         {tab === "buscar" && (
           <>
-            <div className="form" style={{ marginBottom: 12 }}>
-              <label className="form-group" style={{ maxWidth: 220 }}>
-                <span className="label">Fecha</span>
-                <input className="input" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
-              </label>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", marginBottom: 12 }}>
+              <div className="form" style={{ maxWidth: 220 }}>
+                <label className="form-group">
+                  <span className="label">Fecha</span>
+                  <input className="input" type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
+                </label>
+              </div>
+              <button className="btn btn-primary" type="button" onClick={() => changeTab("agregar")} disabled={isAdmin}>
+                Crear turno
+              </button>
             </div>
 
             {status === "loading" && <p className="muted">Cargando...</p>}
