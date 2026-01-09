@@ -505,34 +505,6 @@ code {
   color: #fda4af;
 }
 
-.menu-contact {
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 4px;
-  cursor: default;
-}
-
-.menu-contact-title {
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(234, 242, 255, 0.8);
-}
-
-.menu-contact-name {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.menu-contact-link {
-  color: #eaf2ff;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.menu-contact-link:hover {
-  text-decoration: underline;
-}
 
 .table {
   width: 100%;

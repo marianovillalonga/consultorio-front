@@ -228,16 +228,9 @@ export default function Topbar() {
             <Link className="menu-item" href="/account/configuracion">
               Cambiar datos
             </Link>
-            <div className="menu-item menu-contact">
-              <span className="menu-contact-title">Contacto urgencias</span>
-              <span className="menu-contact-name">Mariano Villalonga</span>
-              <a className="menu-contact-link" href="tel:3413692907">
-                3413692907
-              </a>
-              <a className="menu-contact-link" href="mailto:marianovillalonga94.mv@gmail.com">
-                marianovillalonga94.mv@gmail.com
-              </a>
-            </div>
+            <Link className="menu-item" href="/contacto">
+              Contacto urgencias
+            </Link>
             <button className="menu-item danger" type="button" onClick={logout}>
               Cerrar sesion
             </button>
