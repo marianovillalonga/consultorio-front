@@ -2,7 +2,7 @@
 
 export default function RegisterPage() {
   return (
-    <section className="auth-hero auth-split">
+    <section className="auth-hero auth-split auth-page">
       <div className="auth-visual">
         <div className="auth-visual-card">
           <h2 className="auth-visual-title">Atencion personalizada</h2>

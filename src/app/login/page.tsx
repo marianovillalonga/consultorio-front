@@ -2,7 +2,7 @@ import { AuthForm } from "@/components/AuthForm";
 
 export default function LoginPage() {
   return (
-    <section className="auth-hero auth-split">
+    <section className="auth-hero auth-split auth-page">
       <div className="auth-visual">
         <div className="auth-visual-card">
           <h2 className="auth-visual-title">Bienvenido al panel</h2>

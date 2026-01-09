@@ -52,6 +52,13 @@ a {
   color: var(--text);
 }
 
+.auth-page {
+  min-height: calc(100vh - 112px);
+  align-content: center;
+  margin-top: 0;
+  padding-top: clamp(12px, 4vh, 48px);
+}
+
 .contact-hero {
   width: min(860px, 100%);
   align-items: start;
