@@ -1,4 +1,4 @@
-﻿import { AuthForm } from "@/components/AuthForm";
+import { AuthForm } from "@/components/AuthForm";
 
 export default function LoginPage() {
   return (
@@ -20,9 +20,8 @@ export default function LoginPage() {
       </div>
       <div className="auth-form-panel">
         <div>
-          <p className="eyebrow">Ingreso</p>
-          <h1 className="heading">Coloca tus datos para ingresar</h1>
-          <p className="subheading">Usa tu correo o documento y tu contrasena.</p>
+          <h1 className="heading">Ingresá a tu consultorio</h1>
+          <p className="subheading">Accedé a turnos, pacientes y obras sociales de forma segura.</p>
         </div>
         <div className="auth-card auth-card-elevated">
           <AuthForm mode="login" redirectTo="/dashboard" showHeader={false} />
@@ -31,6 +30,7 @@ export default function LoginPage() {
     </section>
   );
 }
+
 
 
 

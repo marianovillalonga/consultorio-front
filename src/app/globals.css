@@ -8,8 +8,8 @@
   --input-border: #cdd8ed;
   --input-placeholder: #8fa2c6;
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
-  --accent: #2f6bf0;
-  --accent-dark: #1b3f9e;
+  --accent: #1f57d6;
+  --accent-dark: #16307f;
 }
 
 * {
@@ -52,14 +52,14 @@ a {
 }
 
 .auth-split {
-  width: min(1100px, 100%);
+  width: min(1220px, 100%);
   grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.1fr);
   gap: 28px;
   align-items: stretch;
 }
 
 .auth-visual {
-  background: linear-gradient(160deg, rgba(10, 34, 78, 0.96), rgba(39, 104, 204, 0.92));
+  background: linear-gradient(160deg, rgba(10, 34, 78, 0.9), rgba(39, 104, 204, 0.84));
   border-radius: 22px;
   padding: 28px;
   position: relative;
@@ -217,7 +217,7 @@ a {
   background: var(--card);
   border-radius: 10px;
   box-shadow: var(--shadow);
-  padding: 22px 22px 18px;
+  padding: 25px 25px 20px;
   border: 1px solid #dbe8ff;
   color: #0b1d3a;
 }
@@ -503,6 +503,35 @@ code {
 
 .menu-item.danger {
   color: #fda4af;
+}
+
+.menu-contact {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+  cursor: default;
+}
+
+.menu-contact-title {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(234, 242, 255, 0.8);
+}
+
+.menu-contact-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.menu-contact-link {
+  color: #eaf2ff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.menu-contact-link:hover {
+  text-decoration: underline;
 }
 
 .table {
