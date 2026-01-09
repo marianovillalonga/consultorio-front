@@ -51,6 +51,38 @@ a {
   color: var(--text);
 }
 
+.contact-hero {
+  width: min(860px, 100%);
+  align-items: start;
+  padding-top: 18px;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.15fr) minmax(260px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.contact-card {
+  padding: 26px;
+}
+
+.contact-actions {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.contact-actions .label {
+  margin-bottom: 0;
+}
+
+.contact-actions-list {
+  display: grid;
+  gap: 10px;
+}
+
 .auth-split {
   width: min(1220px, 100%);
   grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.1fr);
@@ -577,6 +609,15 @@ input[type="checkbox"] {
   }
 
   .auth-split {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-hero {
+    width: 100%;
+    padding-top: 0;
+  }
+
+  .contact-grid {
     grid-template-columns: 1fr;
   }
 }
